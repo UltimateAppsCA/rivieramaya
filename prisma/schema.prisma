@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                Int       @id @default(autoincrement())
+  email             String    @unique
+  password          String
+  name              String
+  isAgent           Boolean   @default(false)
+  createdServices   Service[]
+  createdPackages   Package[]
+  createdInvoices   Invoice[]
+  purchases         Purchase[]
+  invoicesReceived  Invoice[] @relation("InvoiceCustomer")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Service {
+  id          Int                @id @default(autoincrement())
+  name        String
+  description String
+  price       Float
+  agentId     Int
+  agent       User               @relation(fields: [agentId], references: [id])
+  packages    PackageService[]
+  purchases   Purchase[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model Package {
+  id          Int                @id @default(autoincrement())
+  name        String
+  description String
+  agentId     Int
+  agent       User               @relation(fields: [agentId], references: [id])
+  services    PackageService[]
+  invoices    Invoice[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model PackageService {
+  id        Int     @id @default(autoincrement())
+  packageId Int
+  package   Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, serviceId])
+}
+
+model Invoice {
+  id            Int     @id @default(autoincrement())
+  invoiceNumber String  @unique
+  agentId       Int
+  agent         User    @relation(fields: [agentId], references: [id])
+  customerId    Int
+  customer      User    @relation("InvoiceCustomer", fields: [customerId], references: [id])
+  packageId     Int?
+  package       Package? @relation(fields: [packageId], references: [id])
+  status        String  @default("draft")
+  amount        Float
+  dueDate       DateTime
+  notes         String?
+  paypalOrderId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Purchase {
+  id            Int     @id @default(autoincrement())
+  userId        Int
+  serviceId     Int
+  status        String  @default("pending")
+  paypalOrderId String?
+  amount        Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User    @relation(fields: [userId], references: [id])
+  service       Service @relation(fields: [serviceId], references: [id])
+}
